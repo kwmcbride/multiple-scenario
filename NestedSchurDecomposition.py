@@ -9,12 +9,8 @@ Author: Kevin McBride 2020
 
 """
 import copy
-from pathlib import Path
-import pickle
-import shutil
 from string import Template
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
@@ -87,6 +83,7 @@ class NestedSchurDecomposition():
         self.parameter_var_name = self._kwargs.pop('parameter_var_name', None)
         self.objective_name = self._kwargs.pop('objective_name', None)
         self.gtol = self._kwargs.pop('gtol', 1e-12)
+        self.method = self._kwargs.pop('method', 'trust-constr')
         
         global parameter_var_name
         parameter_var_name = self.parameter_var_name
@@ -94,12 +91,7 @@ class NestedSchurDecomposition():
         if self.parameter_var_name is None:
             raise ValueError('NSD requires that the parameter attribute be provided')
         
-        # Options - nested Schur decomposition
-        self.remove_files = self._kwargs.pop('remove_files', True)
-        self.d_init_user = self._kwargs.pop('d_init', True)
-        self.method = self._kwargs.pop('method', 'trust-constr')
-        
-        # Run various assertions that the model is correctly structured
+        # Run assertions that the model is correctly structured
         self._test_models()
         
         # Add the global constraints to the model
@@ -110,7 +102,6 @@ class NestedSchurDecomposition():
         """Sanity check on the input models"""
         
         for model in self.models_dict.values():
-            
             # Check if the models are even models
             assert(isinstance(model, ConcreteModel) == True)
         
@@ -144,9 +135,7 @@ class NestedSchurDecomposition():
             Constraint(getattr(model, global_set_name), rule=rule_fix_global_parameters))
         
     def _prep_models(self):
-        """Prepare the model for NSD algorithm. Checks discretization,
-        checks for an objective named "objective", and adds appropriate
-        suffixes for sensitivity analysis.
+        """Prepare the model suffixes for NSD algorithm.
         
         """
         for model in self.models_dict.values():        
@@ -161,6 +150,10 @@ class NestedSchurDecomposition():
     def _generate_bounds_object(self):
         """Creates the Bounds object needed by SciPy for minimization
         
+        Returns:
+            bounds (scipy Bounds object): returns the parameter bounds for the
+                trust-region method
+        
         """
         lower_bounds = []
         upper_bounds = []
@@ -169,16 +162,20 @@ class NestedSchurDecomposition():
             lower_bounds.append(v[1][0])
             upper_bounds.append(v[1][1])
         
-        return Bounds(lower_bounds, upper_bounds, True)
+        bounds = Bounds(lower_bounds, upper_bounds, True)
+        return bounds
         
-    def nested_schur_decomposition(self):
-        """Here is where the magic happens. This is the outer problem controlled
-        by a trust region solver running on scipy. This is the only function that
-        the user needs to call to run this thing.
+    def nested_schur_decomposition(self, debug=False):
+        """This is the outer problem controlled by a trust region solver 
+        running on scipy. This is the only method that the user needs to 
+        call after the NSD instance is initialized.
         
         Returns:
-            res (scipy.optimize.optimize.OptimizeResult): The results from the 
+            results (scipy.optimize.optimize.OptimizeResult): The results from the 
                 trust region optimation (outer problem)
+                
+            opt_dict (dict): Information obtained in each iteration (use for
+                debugging)
                 
         """    
         print(iteration_spacer.substitute(iter='NSD Start'))
@@ -189,7 +186,6 @@ class NestedSchurDecomposition():
         self.d_iter = list()
         def callback(x, *args):
             self.d_iter.append(x)
-    
     
         if self.method in ['trust-exact', 'trust-constr']:
         # The args for scipy.optimize.minimize
@@ -218,7 +214,10 @@ class NestedSchurDecomposition():
             results = self._run_newton_step(x0, self.models_dict)
             self.parameters_opt = {k: results[i] for i, k in enumerate(self.d_init.keys())}
         
-        return results, opt_dict
+        if debug:
+            return results, opt_dict
+        else:
+            return results
     
     def _run_newton_step(self, d_init, models):
         """This runs a basic Newton step algorithm - use a decent alpha!
@@ -388,7 +387,21 @@ def _inner_problem(d_init_list, models, generate_gradients=False, initialize=Fal
         return None
 
 def _get_kkt_matrix(model):
+    """This uses pynumero to get the Hessian and Jacobian in order to build the
+    KKT matrix
     
+    Args:
+        model (pyomo ConcreteModel): the current model used in the inner 
+            problem optimization
+            
+    Returns:
+        KKT (pandas.DataFrame): KKT matrix for the current iteration
+        
+        var_index_names (list): list of variable names
+        
+        con_index_names (list): list of constraint names
+    
+    """
     nlp = PyomoNLP(model)
     varList = nlp.get_pyomo_variables()
     conList = nlp.get_pyomo_constraints()

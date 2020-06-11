@@ -282,6 +282,6 @@ if __name__ == "__main__":
                }
     
     nsd = NSD(models, d_init_guess, options)
-    results, od = nsd.nested_schur_decomposition()
+    results = nsd.nested_schur_decomposition()
     
     print(f'\nThe final parameter values are:\n{nsd.parameters_opt}')
