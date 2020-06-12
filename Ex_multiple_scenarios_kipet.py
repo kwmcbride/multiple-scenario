@@ -277,11 +277,12 @@ if __name__ == "__main__":
     # Perform the NSD parameter optimization
     
     # Specify the parameter name in your model (required!)
-    options = {'parameter_var_name': 'P',
+    options = {
                'method': 'trust-constr',
                }
     
-    nsd = NSD(models, d_init_guess, options)
+    parameter_var_name = 'P'
+    nsd = NSD(models, d_init_guess, parameter_var_name, options)
     results = nsd.nested_schur_decomposition()
     
     print(f'\nThe final parameter values are:\n{nsd.parameters_opt}')

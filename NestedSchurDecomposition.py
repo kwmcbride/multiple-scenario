@@ -54,7 +54,7 @@ class NestedSchurDecomposition():
     experiments
     
     """
-    def __init__(self, models, d_info, kwargs=None):
+    def __init__(self, models, d_info, param_var_name, kwargs=None):
         
         """Args:
             models (dict): A dict of pyomo Concrete models
@@ -80,16 +80,12 @@ class NestedSchurDecomposition():
         self.nfe = self._kwargs.pop('nfe', 50)
         self.verbose = self._kwargs.pop('verbose', False)
         self.sens = self._kwargs.pop('use_k_aug', True)
-        self.parameter_var_name = self._kwargs.pop('parameter_var_name', None)
         self.objective_name = self._kwargs.pop('objective_name', None)
         self.gtol = self._kwargs.pop('gtol', 1e-12)
         self.method = self._kwargs.pop('method', 'trust-constr')
         
         global parameter_var_name
-        parameter_var_name = self.parameter_var_name
-        
-        if self.parameter_var_name is None:
-            raise ValueError('NSD requires that the parameter attribute be provided')
+        parameter_var_name = param_var_name
         
         # Run assertions that the model is correctly structured
         self._test_models()
@@ -111,13 +107,14 @@ class NestedSchurDecomposition():
         
         """
         global global_param_name
+        global parameter_var_name
         global global_constraint_name
         global global_set_name
         
         for model in self.models_dict.values():
             param_dict = {}
             for param in self.d_info.keys():
-                if param in getattr(model, self.parameter_var_name):
+                if param in getattr(model, parameter_var_name):
                     param_dict.update({param: self.d_info[param][0]})
 
             setattr(model, global_set_name, Set(initialize=param_dict.keys()))
@@ -196,18 +193,20 @@ class NestedSchurDecomposition():
             hess = _calculate_M
             
             callback(x0)
-            results = minimize(fun, x0, args=args, method=self.method,
-                           jac=jac,
-                           hess=hess,
-                           callback=callback,
-                           bounds=d_bounds,
-                           options=dict(gtol=self.gtol,
+            results = minimize(fun, 
+                               x0, 
+                               args=args, 
+                               method=self.method,
+                               jac=jac,
+                               hess=hess,
+                               callback=callback,
+                               bounds=d_bounds,
+                               options=dict(gtol=self.gtol,
                                       #  initial_tr_radius=0.1,
                                       #  max_tr_radius=0.1
-                                        ),
-                           )
-            self.parameters_opt = {k: results.x[i] for i, k in enumerate(self.d_init.keys())}
-            
+                                      ),
+                         )
+            self.parameters_opt = {k: results.x[i] for i, k in enumerate(self.d_init.keys())}           
             
         if self.method in ['newton']:
             x0 = list(d_init.values())
