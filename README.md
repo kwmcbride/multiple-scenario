@@ -19,7 +19,7 @@ Each model should contain a subset of the global parameters that are to be fit u
 At this moment, an initial guess and bounds for the global parameters are required. This is also passed as a dictionary where each parameter is a key with a tuple that contains both the initial guess and a tuple of the lower and upper bounds.
 
 
-In the example problem, the global parameter set is {k1, k2}. Three of the models contain the full set of global parameters while the fourth only uses $k_1$. This does not present an issue with the NSD algorithm. The first parameter k1 has an initial value of 2.5 and is within [0.0, 5.0]. The second parameter $k_2$ has an initial value of 0.5 and is within [0.0, 1.0]. The second argument to the NSD instance should then be a dictionary of the form (using our example):
+In the example problem, the global parameter set is {k1, k2}. Three of the models contain the full set of global parameters while the fourth only uses k1. This does not present an issue with the NSD algorithm. The first parameter k1 has an initial value of 2.5 and is within [0.0, 5.0]. The second parameter k2 has an initial value of 0.5 and is within [0.0, 1.0]. The second argument to the NSD instance should then be a dictionary of the form (using our example):
 
     d_init_guess = {'k1' : (2.5, (0.0, 5.0)),
                     'k2' : (0.5, (0.0, 1.0)),
