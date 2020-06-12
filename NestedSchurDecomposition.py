@@ -119,7 +119,9 @@ class NestedSchurDecomposition():
 
             setattr(model, global_set_name, Set(initialize=param_dict.keys()))
 
-            setattr(model, global_param_name, Param(getattr(model, global_set_name),
+            setattr(model,
+                    global_param_name, 
+                    Param(getattr(model, global_set_name),
                                   initialize=param_dict,
                                   mutable=True,
                                   ))
@@ -202,11 +204,11 @@ class NestedSchurDecomposition():
                                callback=callback,
                                bounds=d_bounds,
                                options=dict(gtol=self.gtol,
-                                      #  initial_tr_radius=0.1,
-                                      #  max_tr_radius=0.1
-                                      ),
-                         )
-            self.parameters_opt = {k: results.x[i] for i, k in enumerate(self.d_init.keys())}           
+                                            #initial_tr_radius=0.1,
+                                            #max_tr_radius=0.1
+                                       ),
+                           )
+            self.parameters_opt = {k: results.x[i] for i, k in enumerate(self.d_init.keys())}
             
         if self.method in ['newton']:
             x0 = list(d_init.values())
