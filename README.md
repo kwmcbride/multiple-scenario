@@ -1,6 +1,8 @@
 # multiple-scenario
 Nested Schur decomposition method for parameter fitting with multiple experiments modeled using Pyomo
 
+# NOTE: Update coming soon!
+
 ## Usage
 To use the module in your own code, you first need to import the module (here as NSD, for brevity).
 
